@@ -1,7 +1,24 @@
+import json
 import sys
 
+# conversão de hexadecimal para inteiro e extração de opcode
 def interpretar_instrucao(inst_hex):
-    return None
+    inst_hex = inst_hex.strip()
+    if not inst_hex:
+        return None
+
+    try:
+        inst = int(inst_hex, 16)
+    except ValueError:
+        return None
+
+    opcode = inst & 0x7F
+
+    return {
+        'hex': inst_hex,
+        'valor': inst,
+        'opcode': opcode
+    }
 
 def main():
     if len(sys.argv) < 2:
@@ -19,8 +36,12 @@ def main():
                 continue
 
             instrucoes.append(linha)
+            inst = interpretar_instrucao(linha)
+            
+            if inst:
+                instrucoes.append(inst)
 
-    print(instrucoes)
+    print(json.dumps(instrucoes, indent=4))
 
 if __name__ == '__main__':
     main()
