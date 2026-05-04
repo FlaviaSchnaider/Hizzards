@@ -59,6 +59,18 @@ def interpretar_instrucao(inst_hex):
         'rs2': rs2
     }
 
+def detectar_conflitos(instrs):
+    conflitos = []
+
+    for i, inst in enumerate(instrs):
+        for r in inst['leitura']:
+            for j in range(max(0, i-3), i):
+                anterior = instrs[j]
+                if anterior['rd'] == r:
+                    conflitos.append(f"Conflito entre {j} e {i}")
+
+    return conflitos
+
 def main():
     if len(sys.argv) < 2:
         print("Uso: python main.py <arquivo.hex>")
