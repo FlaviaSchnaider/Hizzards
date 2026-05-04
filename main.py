@@ -18,7 +18,19 @@ def interpretar_instrucao(inst_hex):
     rs2 = (inst >> 20) & 0x1F
 
     tipo = 'DESCONHECIDO'
-    
+    if opcode == 0x33:
+        tipo = 'R'
+    elif opcode in [0x13, 0x03, 0x67]:
+        tipo = 'I'
+    elif opcode == 0x23:
+        tipo = 'S'
+    elif opcode == 0x63:
+        tipo = 'B'
+    elif opcode in [0x37, 0x17]:
+        tipo = 'U'
+    elif opcode == 0x6F:
+        tipo = 'J'
+
     eh_desvio = opcode == 0x63
     eh_salto = opcode in [0x6F, 0x67]
     eh_load = opcode == 0x03
@@ -54,20 +66,34 @@ def interpretar_instrucao(inst_hex):
         'hex': inst_hex,
         'valor': inst,
         'opcode': opcode,
-        'rd': rd,
+        'rd': registrador_escrito,
         'rs1': rs1,
-        'rs2': rs2
+        'rs2': rs2,
+        'leitura': registradores_lidos,
+        'eh_desvio': eh_desvio,
+        'eh_salto': eh_salto,
+        'eh_load': eh_load,
+        'tipo': tipo
     }
 
-def detectar_conflitos(instrs):
+
+def detectar_conflitos(instrs, forwarding=False):
     conflitos = []
 
     for i, inst in enumerate(instrs):
         for r in inst['leitura']:
-            for j in range(max(0, i-3), i):
-                anterior = instrs[j]
-                if anterior['rd'] == r:
-                    conflitos.append(f"Conflito entre {j} e {i}")
+            for dist in range(1, 4):
+                if i - dist >= 0:
+                    anterior = instrs[i - dist]
+
+                    if anterior['rd'] == r:
+                        if not forwarding:
+                            conflitos.append(f"RAW x{r} entre {i-dist} e {i}")
+                        else:
+                            # só penaliza load-use
+                            if anterior['eh_load'] and dist == 1:
+                                conflitos.append(f"Load-use x{r} entre {i-dist} e {i}")
+                        break
 
     return conflitos
 
@@ -76,7 +102,6 @@ def main():
         print("Uso: python main.py <arquivo.hex>")
         sys.exit(1)
 
-    # leitura do arquivo .hex
     arquivo = sys.argv[1]
     instrucoes = []
 
@@ -86,13 +111,16 @@ def main():
             if not linha or linha.startswith('#'):
                 continue
 
-            instrucoes.append(linha)
             inst = interpretar_instrucao(linha)
-            
             if inst:
                 instrucoes.append(inst)
 
-    print(json.dumps(instrucoes, indent=4))
+    print("\nSem forwarding:")
+    print(detectar_conflitos(instrucoes, forwarding=False))
+
+    print("\nCom forwarding:")
+    print(detectar_conflitos(instrucoes, forwarding=True))
+
 
 if __name__ == '__main__':
     main()
