@@ -46,6 +46,10 @@ def interpretar_instrucao(inst_hex):
     elif tipo == 'J':
         registrador_escrito = rd
 
+    registradores_lidos = [r for r in registradores_lidos if r != 0]
+    if registrador_escrito == 0:
+        registrador_escrito = -1
+
     return {
         'hex': inst_hex,
         'valor': inst,
