@@ -18,24 +18,33 @@ def interpretar_instrucao(inst_hex):
     rs2 = (inst >> 20) & 0x1F
 
     tipo = 'DESCONHECIDO'
+    
     eh_desvio = opcode == 0x63
     eh_salto = opcode in [0x6F, 0x67]
     eh_load = opcode == 0x03
+
     registradores_lidos = []
     registrador_escrito = -1
 
-    if opcode == 0x33:
-        tipo = 'R'
-    elif opcode in [0x13, 0x03, 0x67]:
-        tipo = 'I'
-    elif opcode == 0x23:
-        tipo = 'S'
-    elif opcode == 0x63:
-        tipo = 'B'
-    elif opcode in [0x37, 0x17]:
-        tipo = 'U'
-    elif opcode == 0x6F:
-        tipo = 'J'
+    if tipo == 'R':
+        registradores_lidos = [rs1, rs2]
+        registrador_escrito = rd
+
+    elif tipo == 'I':
+        registradores_lidos = [rs1]
+        registrador_escrito = rd
+
+    elif tipo == 'S':
+        registradores_lidos = [rs1, rs2]
+
+    elif tipo == 'B':
+        registradores_lidos = [rs1, rs2]
+
+    elif tipo == 'U':
+        registrador_escrito = rd
+
+    elif tipo == 'J':
+        registrador_escrito = rd
 
     return {
         'hex': inst_hex,
