@@ -97,6 +97,14 @@ def detectar_conflitos(instrs, forwarding=False):
 
     return conflitos
 
+def simular_pipeline(instrs):
+    pipeline = []
+
+    for inst in instrs:
+        pipeline.append(inst)
+
+    return pipeline
+
 def main():
     if len(sys.argv) < 2:
         print("Uso: python main.py <arquivo.hex>")
@@ -120,6 +128,12 @@ def main():
 
     print("\nCom forwarding:")
     print(detectar_conflitos(instrucoes, forwarding=True))
+
+    print("\nPipeline (sem correções):")
+    pipeline = simular_pipeline(instrucoes)
+
+    for i, inst in enumerate(pipeline):
+        print(i, inst['hex'])
 
 
 if __name__ == '__main__':
