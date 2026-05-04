@@ -73,7 +73,8 @@ def interpretar_instrucao(inst_hex):
         'eh_desvio': eh_desvio,
         'eh_salto': eh_salto,
         'eh_load': eh_load,
-        'tipo': tipo
+        'tipo': tipo,
+        'eh_nop': inst == 0x00000013
     }
 
 
@@ -99,6 +100,9 @@ def detectar_conflitos(instrs, forwarding=False):
 
 def simular_pipeline(instrs):
     pipeline = []
+
+    NOP = interpretar_instrucao("00000013")
+    NOP['eh_nop'] = True
 
     for inst in instrs:
         pipeline.append(inst)
