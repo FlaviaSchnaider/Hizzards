@@ -13,11 +13,17 @@ def interpretar_instrucao(inst_hex):
         return None
 
     opcode = inst & 0x7F
+    rd = (inst >> 7) & 0x1F
+    rs1 = (inst >> 15) & 0x1F
+    rs2 = (inst >> 20) & 0x1F
 
     return {
         'hex': inst_hex,
         'valor': inst,
-        'opcode': opcode
+        'opcode': opcode,
+        'rd': rd,
+        'rs1': rs1,
+        'rs2': rs2
     }
 
 def main():
