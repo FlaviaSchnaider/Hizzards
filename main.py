@@ -40,20 +40,15 @@ def interpretar_instrucao(inst_hex):
     if tipo == 'R':
         registradores_lidos = [rs1, rs2]
         registrador_escrito = rd
-
     elif tipo == 'I':
         registradores_lidos = [rs1]
         registrador_escrito = rd
-
     elif tipo == 'S':
         registradores_lidos = [rs1, rs2]
-
     elif tipo == 'B':
         registradores_lidos = [rs1, rs2]
-
     elif tipo == 'U':
         registrador_escrito = rd
-
     elif tipo == 'J':
         registrador_escrito = rd
 
@@ -77,31 +72,20 @@ def interpretar_instrucao(inst_hex):
     }
 
 
-def detectar_conflitos(instrs, forwarding=False):
-    conflitos = []
+# NOP
+def criar_nop(base_nop, motivo):
+    nop = dict(base_nop)
+    nop['eh_nop'] = True
+    nop['motivo'] = motivo
+    return nop
 
-    for i, inst in enumerate(instrs):
-        for r in inst['leitura']:
-            for dist in range(1, 4):
-                if i - dist >= 0:
-                    anterior = instrs[i - dist]
-
-                    if anterior['rd'] == r:
-                        if not forwarding:
-                            conflitos.append(f"RAW x{r} entre {i-dist} e {i}")
-                        else:
-                            if anterior['eh_load'] and dist == 1:
-                                conflitos.append(f"Load-use x{r} entre {i-dist} e {i}")
-                        break
-
-    return conflitos
-
+# PIPELINE (COM NOPs)
 def simular_pipeline(instrs, forwarding=False):
     novas_instrs = []
     historico = []
 
-    NOP = interpretar_instrucao("00000013")
-    NOP['eh_nop'] = True
+    base_nop = interpretar_instrucao("00000013")
+    base_nop['eh_nop'] = True
 
     nops_dados = 0
     nops_controle = 0
@@ -115,7 +99,11 @@ def simular_pipeline(instrs, forwarding=False):
                 if len(historico) >= dist:
                     anterior = historico[-dist]
 
-                    if anterior['rd'] != -1 and anterior['rd'] == r and not anterior['eh_nop']:
+                    if (
+                        not anterior.get('eh_nop', False)
+                        and anterior['rd'] != -1
+                        and anterior['rd'] == r
+                    ):
                         if not forwarding:
                             nops_necessarios = max(nops_necessarios, 3 - dist)
                         else:
@@ -123,10 +111,9 @@ def simular_pipeline(instrs, forwarding=False):
                                 nops_necessarios = max(nops_necessarios, 1)
                         break
 
-        # inserir NOPs
+        # inserir NOPs de dados
         for _ in range(nops_necessarios):
-            nop = dict(NOP)
-            nop['motivo'] = 'dados'
+            nop = criar_nop(base_nop, 'dados')
             novas_instrs.append(nop)
             historico.append(nop)
             nops_dados += 1
@@ -137,14 +124,54 @@ def simular_pipeline(instrs, forwarding=False):
 
         # HAZARD DE CONTROLE
         if inst['eh_desvio'] or inst['eh_salto']:
-            for _ in range(2):  # penalidade fixa
-                nop = dict(NOP)
-                nop['motivo'] = 'controle'
+            for _ in range(2):
+                nop = criar_nop(base_nop, 'controle')
                 novas_instrs.append(nop)
                 historico.append(nop)
                 nops_controle += 1
 
     return novas_instrs, nops_dados, nops_controle
+
+
+# PIPELINE CICLO A CICLO
+def simular_ciclos(instrs):
+    estagios = ['IF', 'ID', 'EX', 'MEM', 'WB']
+    pipeline = [None] * 5
+
+    ciclos = []
+    fila = list(instrs)
+
+    while any(pipeline) or fila:
+        estado = []
+
+        # registrar estado atual
+        for i, inst in enumerate(pipeline):
+            if inst is None:
+                estado.append('---')
+            elif inst.get('eh_nop', False):
+                estado.append('NOP')
+            else:
+                estado.append(inst['hex'])
+
+        ciclos.append(estado)
+
+        # shift pipeline
+        pipeline = [None] + pipeline[:-1]
+
+        # inserir nova instrução
+        if fila:
+            pipeline[0] = fila.pop(0)
+
+    return ciclos
+
+
+def imprimir_pipeline_ciclos(ciclos):
+    print("\nPipeline ciclo a ciclo:\n")
+    print("Ciclo | IF | ID | EX | MEM | WB")
+    print("-" * 50)
+
+    for i, ciclo in enumerate(ciclos):
+        print(f"{i:03d} | " + " | ".join(f"{x:8}" for x in ciclo))
 
 
 def main():
@@ -165,24 +192,22 @@ def main():
             if inst:
                 instrucoes.append(inst)
 
-    print("\nPipeline sem forwarding:")
-    pipeline, nops_dados, nops_ctrl = simular_pipeline(instrucoes, forwarding=False)
-    print("NOPs dados:", nops_dados)
-    print("NOPs controle:", nops_ctrl)
-
     print("\nPipeline com forwarding:")
     pipeline, nops_dados, nops_ctrl = simular_pipeline(instrucoes, forwarding=True)
+
     print("NOPs dados:", nops_dados)
     print("NOPs controle:", nops_ctrl)
 
     print("\nPipeline detalhado:")
-    pipeline, _, _ = simular_pipeline(instrucoes)
-
     for i, inst in enumerate(pipeline):
-        if inst.get('eh_nop'):
-            print(i, "NOP", inst.get('motivo', ''))
+        if inst.get('eh_nop', False):
+            print(f"{i:03d} | NOP ({inst.get('motivo', 'desconhecido')})")
         else:
-            print(i, inst['hex'])
+            print(f"{i:03d} | {inst['hex']}")
+
+    # simulação ciclo a ciclo
+    ciclos = simular_ciclos(pipeline)
+    imprimir_pipeline_ciclos(ciclos)
 
 
 if __name__ == '__main__':
