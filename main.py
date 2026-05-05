@@ -83,6 +83,7 @@ def criar_nop(base_nop, motivo):
 def simular_pipeline(instrs, forwarding=False):
     novas_instrs = []
     historico = []
+    hazards = []  
 
     base_nop = interpretar_instrucao("00000013")
     base_nop['eh_nop'] = True
@@ -104,6 +105,14 @@ def simular_pipeline(instrs, forwarding=False):
                         and anterior['rd'] != -1
                         and anterior['rd'] == r
                     ):
+                        hazards.append({
+                            'tipo': 'dados',
+                            'reg': r,
+                            'inst_atual': inst['hex'],
+                            'inst_anterior': anterior['hex'],
+                            'distancia': dist
+                        })
+
                         if not forwarding:
                             nops_necessarios = max(nops_necessarios, 3 - dist)
                         else:
@@ -124,14 +133,19 @@ def simular_pipeline(instrs, forwarding=False):
 
         # HAZARD DE CONTROLE
         if inst['eh_salto'] or (inst['eh_desvio'] and branch_tomado()):
+            
+            hazards.append({
+                'tipo': 'controle',
+                'inst': inst['hex']
+            })
+
             for _ in range(2):
                 nop = criar_nop(base_nop, 'controle')
                 novas_instrs.append(nop)
                 historico.append(nop)
                 nops_controle += 1
 
-    return novas_instrs, nops_dados, nops_controle
-
+    return novas_instrs, nops_dados, nops_controle, hazards
 
 # PIPELINE CICLO A CICLO
 def simular_ciclos(instrs):
@@ -206,14 +220,18 @@ def main():
             if inst:
                 instrucoes.append(inst)
 
-    print("\n==============================")
     print("PIPELINE SEM FORWARDING")
-    print("==============================")
-
-    pipeline_nf, nops_d_nf, nops_c_nf = simular_pipeline(instrucoes, forwarding=False)
+    pipeline_nf, nops_d_nf, nops_c_nf, hazards_nf = simular_pipeline(instrucoes, forwarding=False)
 
     print("NOPs dados:", nops_d_nf)
     print("NOPs controle:", nops_c_nf)
+
+    print("\nHazards detectados (sem forwarding):")
+    for h in hazards_nf:
+        if h['tipo'] == 'dados':
+            print(f"[DADOS] Reg x{h['reg']} | {h['inst_anterior']} -> {h['inst_atual']} (dist={h['distancia']})")
+        else:
+            print(f"[CONTROLE] Desvio/SALTO em {h['inst']}")
 
     print("\nPipeline detalhado (sem forwarding):")
     for i, inst in enumerate(pipeline_nf):
@@ -234,10 +252,17 @@ def main():
     imprimir_pipeline_ciclos(ciclos_nf)
 
     print("PIPELINE COM FORWARDING")
-    pipeline_f, nops_d_f, nops_c_f = simular_pipeline(instrucoes, forwarding=True)
+    pipeline_f, nops_d_f, nops_c_f, hazards_f = simular_pipeline(instrucoes, forwarding=True)
 
     print("NOPs dados:", nops_d_f)
     print("NOPs controle:", nops_c_f)
+
+    print("\nHazards detectados (com forwarding):")
+    for h in hazards_f:
+        if h['tipo'] == 'dados':
+            print(f"[DADOS] Reg x{h['reg']} | {h['inst_anterior']} -> {h['inst_atual']} (dist={h['distancia']})")
+        else:
+            print(f"[CONTROLE] Desvio/SALTO em {h['inst']}")
 
     print("\nPipeline detalhado (com forwarding):")
     for i, inst in enumerate(pipeline_f):
@@ -257,7 +282,7 @@ def main():
 
     imprimir_pipeline_ciclos(ciclos_f)
 
-    print("COMPARAÇÃO")
+    print("\nCOMPARAÇÃO")
     print(f"NOPs dados:   sem={nops_d_nf} | com={nops_d_f}")
     print(f"NOPs controle: sem={nops_c_nf} | com={nops_c_f}")
 
