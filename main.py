@@ -146,6 +146,12 @@ def simular_pipeline(instrs, forwarding=False):
                 historico.append(nop)
                 nops_controle += 1
 
+    # RECÁLCULO DE ENDEREÇOS (PC)
+    pc = 0
+    for inst in novas_instrs:
+        inst['pc'] = pc
+        pc += 4
+
     return novas_instrs, nops_dados, nops_controle, hazards
 
 
@@ -306,6 +312,11 @@ def main():
     salvar_pipeline("saida_forwarding.hex", pipeline_f)
     salvar_pipeline("saida_sem_forwarding.hex", pipeline_nf)
 
+    print("\nCÁLCULO DE NOVOS ENDEREÇOS (PC) APÓS INSERÇÃO DE NOPs:")
+    for inst in pipeline_nf:
+        print(f"{inst['pc']:04x} | {inst['hex']}")
+        if inst.get('eh_nop', False):
+            print(f"{inst['pc']:04x} | NOP ({inst.get('motivo')})")
 
 if __name__ == '__main__':
     main()
