@@ -206,31 +206,63 @@ def main():
             if inst:
                 instrucoes.append(inst)
 
-    print("\nPipeline com forwarding:")
-    pipeline, nops_dados, nops_ctrl = simular_pipeline(instrucoes, forwarding=True)
+    print("\n==============================")
+    print("PIPELINE SEM FORWARDING")
+    print("==============================")
 
-    print("NOPs dados:", nops_dados)
-    print("NOPs controle:", nops_ctrl)
+    pipeline_nf, nops_d_nf, nops_c_nf = simular_pipeline(instrucoes, forwarding=False)
 
-    print("\nPipeline detalhado:")
-    for i, inst in enumerate(pipeline):
+    print("NOPs dados:", nops_d_nf)
+    print("NOPs controle:", nops_c_nf)
+
+    print("\nPipeline detalhado (sem forwarding):")
+    for i, inst in enumerate(pipeline_nf):
         if inst.get('eh_nop', False):
             print(f"{i:03d} | NOP ({inst.get('motivo', 'desconhecido')})")
         else:
             print(f"{i:03d} | {inst['hex']}")
     print("-" * 50)
 
-    ciclos = simular_ciclos(pipeline)
+    ciclos_nf = simular_ciclos(pipeline_nf)
+    metricas_nf = calcular_metricas(pipeline_nf, ciclos_nf)
 
-    metricas = calcular_metricas(pipeline, ciclos)
+    print("\nMétricas (sem forwarding):")
+    print("Instruções:", metricas_nf['instrucoes'])
+    print("Ciclos:", metricas_nf['ciclos'])
+    print("CPI:", metricas_nf['cpi'])
 
-    print("\nMétricas:")
-    print("Instruções:", metricas['instrucoes'])
-    print("Ciclos:", metricas['ciclos'])
-    print("CPI:", metricas['cpi'])
+    imprimir_pipeline_ciclos(ciclos_nf)
 
-    imprimir_pipeline_ciclos(ciclos)
+    print("PIPELINE COM FORWARDING")
+    pipeline_f, nops_d_f, nops_c_f = simular_pipeline(instrucoes, forwarding=True)
 
+    print("NOPs dados:", nops_d_f)
+    print("NOPs controle:", nops_c_f)
+
+    print("\nPipeline detalhado (com forwarding):")
+    for i, inst in enumerate(pipeline_f):
+        if inst.get('eh_nop', False):
+            print(f"{i:03d} | NOP ({inst.get('motivo', 'desconhecido')})")
+        else:
+            print(f"{i:03d} | {inst['hex']}")
+    print("-" * 50)
+
+    ciclos_f = simular_ciclos(pipeline_f)
+    metricas_f = calcular_metricas(pipeline_f, ciclos_f)
+
+    print("\nMétricas (com forwarding):")
+    print("Instruções:", metricas_f['instrucoes'])
+    print("Ciclos:", metricas_f['ciclos'])
+    print("CPI:", metricas_f['cpi'])
+
+    imprimir_pipeline_ciclos(ciclos_f)
+
+    print("COMPARAÇÃO")
+    print(f"NOPs dados:   sem={nops_d_nf} | com={nops_d_f}")
+    print(f"NOPs controle: sem={nops_c_nf} | com={nops_c_f}")
+
+    print(f"CPI: sem={metricas_nf['cpi']} | com={metricas_f['cpi']}")
+    print(f"Ciclos: sem={metricas_nf['ciclos']} | com={metricas_f['ciclos']}")
 
 if __name__ == '__main__':
     main()
