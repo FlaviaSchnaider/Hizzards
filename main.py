@@ -99,15 +99,34 @@ def detectar_conflitos(instrs, forwarding=False):
     return conflitos
 
 def simular_pipeline(instrs):
-    pipeline = []
+    novas_instrs = []
+    historico = []
 
     NOP = interpretar_instrucao("00000013")
     NOP['eh_nop'] = True
 
     for inst in instrs:
-        pipeline.append(inst)
+        nops_necessarios = 0
 
-    return pipeline
+        for r in inst['leitura']:
+            for dist in range(1, 4):
+                if len(historico) >= dist:
+                    anterior = historico[-dist]
+
+                    if anterior['rd'] == r and not anterior['eh_nop']:
+                        nops_necessarios = max(nops_necessarios, 3 - dist)
+                        break
+
+        # inserir NOPs
+        for _ in range(nops_necessarios):
+            nop = dict(NOP)
+            novas_instrs.append(nop)
+            historico.append(nop)
+
+        novas_instrs.append(inst)
+        historico.append(inst)
+
+    return novas_instrs
 
 def main():
     if len(sys.argv) < 2:
