@@ -91,7 +91,6 @@ def detectar_conflitos(instrs, forwarding=False):
                         if not forwarding:
                             conflitos.append(f"RAW x{r} entre {i-dist} e {i}")
                         else:
-                            # só penaliza load-use
                             if anterior['eh_load'] and dist == 1:
                                 conflitos.append(f"Load-use x{r} entre {i-dist} e {i}")
                         break
@@ -102,8 +101,11 @@ def simular_pipeline(instrs, forwarding=False):
     novas_instrs = []
     historico = []
 
+    # NOP padrão
     NOP = interpretar_instrucao("00000013")
     NOP['eh_nop'] = True
+
+    nops_total = 0  
 
     for inst in instrs:
         nops_necessarios = 0
@@ -113,7 +115,7 @@ def simular_pipeline(instrs, forwarding=False):
                 if len(historico) >= dist:
                     anterior = historico[-dist]
 
-                    if anterior['rd'] == r and not anterior['eh_nop']:
+                    if anterior['rd'] != -1 and anterior['rd'] == r and not anterior['eh_nop']:
                         if not forwarding:
                             nops_necessarios = max(nops_necessarios, 3 - dist)
                         else:
@@ -126,11 +128,13 @@ def simular_pipeline(instrs, forwarding=False):
             nop = dict(NOP)
             novas_instrs.append(nop)
             historico.append(nop)
+            nops_total += 1  
 
         novas_instrs.append(inst)
         historico.append(inst)
 
-    return novas_instrs
+    return novas_instrs, nops_total 
+
 
 def main():
     if len(sys.argv) < 2:
@@ -150,14 +154,16 @@ def main():
             if inst:
                 instrucoes.append(inst)
 
-    print("\nSem forwarding:")
-    print(detectar_conflitos(instrucoes, forwarding=False))
+    print("\nPipeline sem forwarding:")
+    pipeline, nops = simular_pipeline(instrucoes, forwarding=False)
+    print("NOPs:", nops)
 
-    print("\nCom forwarding:")
-    print(detectar_conflitos(instrucoes, forwarding=True))
+    print("\nPipeline com forwarding:")
+    pipeline, nops = simular_pipeline(instrucoes, forwarding=True)
+    print("NOPs:", nops)
 
     print("\nPipeline (sem correções):")
-    pipeline = simular_pipeline(instrucoes)
+    pipeline, _ = simular_pipeline(instrucoes)
 
     for i, inst in enumerate(pipeline):
         print(i, inst['hex'])
