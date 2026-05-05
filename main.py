@@ -98,7 +98,7 @@ def detectar_conflitos(instrs, forwarding=False):
 
     return conflitos
 
-def simular_pipeline(instrs):
+def simular_pipeline(instrs, forwarding=False):
     novas_instrs = []
     historico = []
 
@@ -114,7 +114,11 @@ def simular_pipeline(instrs):
                     anterior = historico[-dist]
 
                     if anterior['rd'] == r and not anterior['eh_nop']:
-                        nops_necessarios = max(nops_necessarios, 3 - dist)
+                        if not forwarding:
+                            nops_necessarios = max(nops_necessarios, 3 - dist)
+                        else:
+                            if anterior['eh_load'] and dist == 1:
+                                nops_necessarios = max(nops_necessarios, 1)
                         break
 
         # inserir NOPs
