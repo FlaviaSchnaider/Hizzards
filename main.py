@@ -123,7 +123,7 @@ def simular_pipeline(instrs, forwarding=False):
         historico.append(nova)
 
         # HAZARD DE CONTROLE
-        if inst['eh_salto'] or (inst['eh_desvio'] and branch_tomado(inst)):
+        if inst['eh_salto'] or (inst['eh_desvio'] and branch_tomado()):
             for _ in range(2):
                 nop = criar_nop(base_nop, 'controle')
                 novas_instrs.append(nop)
@@ -173,9 +173,20 @@ def imprimir_pipeline_ciclos(ciclos):
     for i, ciclo in enumerate(ciclos):
         print(f"{i:03d} | " + " | ".join(f"{x:8}" for x in ciclo))
 
-def branch_tomado(inst):
-    # assumir metade dos branches 
-    return (inst['valor'] % 2) == 0
+def branch_tomado():
+    return True
+
+def calcular_metricas(pipeline, ciclos):
+    total_instr = sum(1 for i in pipeline if not i.get('eh_nop', False))
+    total_ciclos = len(ciclos)
+
+    cpi = total_ciclos / total_instr if total_instr > 0 else 0
+
+    return {
+        'instrucoes': total_instr,
+        'ciclos': total_ciclos,
+        'cpi': round(cpi, 2)
+    }
 
 def main():
     if len(sys.argv) < 2:
@@ -207,9 +218,17 @@ def main():
             print(f"{i:03d} | NOP ({inst.get('motivo', 'desconhecido')})")
         else:
             print(f"{i:03d} | {inst['hex']}")
+    print("-" * 50)
 
-    # simulação ciclo a ciclo
     ciclos = simular_ciclos(pipeline)
+
+    metricas = calcular_metricas(pipeline, ciclos)
+
+    print("\nMétricas:")
+    print("Instruções:", metricas['instrucoes'])
+    print("Ciclos:", metricas['ciclos'])
+    print("CPI:", metricas['cpi'])
+
     imprimir_pipeline_ciclos(ciclos)
 
 
