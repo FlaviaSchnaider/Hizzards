@@ -123,7 +123,7 @@ def simular_pipeline(instrs, forwarding=False):
         historico.append(nova)
 
         # HAZARD DE CONTROLE
-        if inst['eh_desvio'] or inst['eh_salto']:
+        if inst['eh_salto'] or (inst['eh_desvio'] and branch_tomado(inst)):
             for _ in range(2):
                 nop = criar_nop(base_nop, 'controle')
                 novas_instrs.append(nop)
@@ -173,6 +173,9 @@ def imprimir_pipeline_ciclos(ciclos):
     for i, ciclo in enumerate(ciclos):
         print(f"{i:03d} | " + " | ".join(f"{x:8}" for x in ciclo))
 
+def branch_tomado(inst):
+    # assumir metade dos branches 
+    return (inst['valor'] % 2) == 0
 
 def main():
     if len(sys.argv) < 2:
