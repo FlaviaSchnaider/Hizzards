@@ -79,6 +79,7 @@ def criar_nop(base_nop, motivo):
     nop['motivo'] = motivo
     return nop
 
+
 # PIPELINE (COM NOPs)
 def simular_pipeline(instrs, forwarding=False):
     novas_instrs = []
@@ -147,6 +148,7 @@ def simular_pipeline(instrs, forwarding=False):
 
     return novas_instrs, nops_dados, nops_controle, hazards
 
+
 # PIPELINE CICLO A CICLO
 def simular_ciclos(instrs):
     estagios = ['IF', 'ID', 'EX', 'MEM', 'WB']
@@ -187,8 +189,10 @@ def imprimir_pipeline_ciclos(ciclos):
     for i, ciclo in enumerate(ciclos):
         print(f"{i:03d} | " + " | ".join(f"{x:8}" for x in ciclo))
 
+
 def branch_tomado():
     return True
+
 
 def calcular_metricas(pipeline, ciclos):
     total_instr = sum(1 for i in pipeline if not i.get('eh_nop', False))
@@ -201,6 +205,16 @@ def calcular_metricas(pipeline, ciclos):
         'ciclos': total_ciclos,
         'cpi': round(cpi, 2)
     }
+
+
+def salvar_pipeline(nome, pipeline):
+    with open(nome, 'w') as f:
+        for inst in pipeline:
+            if inst.get('eh_nop', False):
+                f.write("00000013\n")
+            else:
+                f.write(inst['hex'] + "\n")
+
 
 def main():
     if len(sys.argv) < 2:
@@ -288,6 +302,10 @@ def main():
 
     print(f"CPI: sem={metricas_nf['cpi']} | com={metricas_f['cpi']}")
     print(f"Ciclos: sem={metricas_nf['ciclos']} | com={metricas_f['ciclos']}")
+
+    salvar_pipeline("saida_forwarding.hex", pipeline_f)
+    salvar_pipeline("saida_sem_forwarding.hex", pipeline_nf)
+
 
 if __name__ == '__main__':
     main()
