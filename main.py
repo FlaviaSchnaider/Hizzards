@@ -1,4 +1,3 @@
-import json
 import sys
 
 # conversão de hexadecimal para inteiro e extração de opcode
@@ -101,15 +100,16 @@ def simular_pipeline(instrs, forwarding=False):
     novas_instrs = []
     historico = []
 
-    # NOP padrão
     NOP = interpretar_instrucao("00000013")
     NOP['eh_nop'] = True
 
-    nops_total = 0  
+    nops_dados = 0
+    nops_controle = 0
 
     for inst in instrs:
         nops_necessarios = 0
 
+        # HAZARD DE DADOS
         for r in inst['leitura']:
             for dist in range(1, 4):
                 if len(historico) >= dist:
@@ -126,14 +126,25 @@ def simular_pipeline(instrs, forwarding=False):
         # inserir NOPs
         for _ in range(nops_necessarios):
             nop = dict(NOP)
+            nop['motivo'] = 'dados'
             novas_instrs.append(nop)
             historico.append(nop)
-            nops_total += 1  
+            nops_dados += 1
 
-        novas_instrs.append(inst)
-        historico.append(inst)
+        nova = dict(inst)
+        novas_instrs.append(nova)
+        historico.append(nova)
 
-    return novas_instrs, nops_total 
+        # HAZARD DE CONTROLE
+        if inst['eh_desvio'] or inst['eh_salto']:
+            for _ in range(2):  # penalidade fixa
+                nop = dict(NOP)
+                nop['motivo'] = 'controle'
+                novas_instrs.append(nop)
+                historico.append(nop)
+                nops_controle += 1
+
+    return novas_instrs, nops_dados, nops_controle
 
 
 def main():
@@ -155,18 +166,23 @@ def main():
                 instrucoes.append(inst)
 
     print("\nPipeline sem forwarding:")
-    pipeline, nops = simular_pipeline(instrucoes, forwarding=False)
-    print("NOPs:", nops)
+    pipeline, nops_dados, nops_ctrl = simular_pipeline(instrucoes, forwarding=False)
+    print("NOPs dados:", nops_dados)
+    print("NOPs controle:", nops_ctrl)
 
     print("\nPipeline com forwarding:")
-    pipeline, nops = simular_pipeline(instrucoes, forwarding=True)
-    print("NOPs:", nops)
+    pipeline, nops_dados, nops_ctrl = simular_pipeline(instrucoes, forwarding=True)
+    print("NOPs dados:", nops_dados)
+    print("NOPs controle:", nops_ctrl)
 
-    print("\nPipeline (sem correções):")
-    pipeline, _ = simular_pipeline(instrucoes)
+    print("\nPipeline detalhado:")
+    pipeline, _, _ = simular_pipeline(instrucoes)
 
     for i, inst in enumerate(pipeline):
-        print(i, inst['hex'])
+        if inst.get('eh_nop'):
+            print(i, "NOP", inst.get('motivo', ''))
+        else:
+            print(i, inst['hex'])
 
 
 if __name__ == '__main__':
