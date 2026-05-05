@@ -133,7 +133,7 @@ def simular_pipeline(instrs, forwarding=False):
         historico.append(nova)
 
         # HAZARD DE CONTROLE
-        if inst['eh_salto'] or (inst['eh_desvio'] and branch_tomado()):
+        if inst['eh_salto'] or (inst['eh_desvio'] and branch_tomado(inst)):
             
             hazards.append({
                 'tipo': 'controle',
@@ -196,7 +196,7 @@ def imprimir_pipeline_ciclos(ciclos):
         print(f"{i:03d} | " + " | ".join(f"{x:8}" for x in ciclo))
 
 
-def branch_tomado():
+def branch_tomado(inst):
     return True
 
 
@@ -220,6 +220,12 @@ def salvar_pipeline(nome, pipeline):
                 f.write("00000013\n")
             else:
                 f.write(inst['hex'] + "\n")
+
+
+def calcular_sobrecusto(original, pipeline):
+    total_original = len(original)
+    total_final = len(pipeline)
+    return total_final - total_original
 
 
 def main():
@@ -317,6 +323,9 @@ def main():
         print(f"{inst['pc']:04x} | {inst['hex']}")
         if inst.get('eh_nop', False):
             print(f"{inst['pc']:04x} | NOP ({inst.get('motivo')})")
+
+    sobrecusto = calcular_sobrecusto(instrucoes, pipeline_nf)
+    print(f"\nSobrecusto (número de instruções adicionais): {sobrecusto}")
 
 if __name__ == '__main__':
     main()
