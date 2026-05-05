@@ -320,12 +320,18 @@ def main():
 
     print("\nCÁLCULO DE NOVOS ENDEREÇOS (PC) APÓS INSERÇÃO DE NOPs:")
     for inst in pipeline_nf:
-        print(f"{inst['pc']:04x} | {inst['hex']}")
         if inst.get('eh_nop', False):
             print(f"{inst['pc']:04x} | NOP ({inst.get('motivo')})")
+        else:
+            print(f"{inst['pc']:04x} | {inst['hex']}")
 
-    sobrecusto = calcular_sobrecusto(instrucoes, pipeline_nf)
-    print(f"\nSobrecusto (número de instruções adicionais): {sobrecusto}")
+    sobrecusto_nf = calcular_sobrecusto(instrucoes, pipeline_nf)
+    sobrecusto_f = calcular_sobrecusto(instrucoes, pipeline_f)
 
+    print(f"\nSobrecusto:")
+    print(f"Sem forwarding: {sobrecusto_nf}")
+    print(f"Com forwarding: {sobrecusto_f}")
+
+    
 if __name__ == '__main__':
     main()
